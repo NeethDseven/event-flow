@@ -44,6 +44,17 @@ $booking150ThreeDays = new Booking(id: 2005, customer: $customerVip, passType: '
 $booking150ThreeDays->addItem(new BookingItem($ticket150, 1));
 $runner->near(115.00, $calculator->calculateTotal($booking150ThreeDays), 'VIP Pass 3 jours sous 300€ (-20€)');
 
+// Pass 3 jours client standard : la remise de 20€ s'applique à tout le monde
+$ticket60 = new Ticket(code: 'T-60', label: 'Ticket 60€', price: 60.00);
+$bookingStdThreeDays = new Booking(id: 2006, customer: $customerStd, passType: 'three_days');
+$bookingStdThreeDays->addItem(new BookingItem($ticket60, 2));
+$runner->near(100.00, $calculator->calculateTotal($bookingStdThreeDays), 'Standard Pass 3 jours (120€ - 20€ = 100€)');
+
+// Le montant final ne peut pas être négatif
+$ticket10 = new Ticket(code: 'T-10', label: 'Ticket 10€', price: 10.00);
+$bookingSmallThreeDays = new Booking(id: 2007, customer: $customerStd, passType: 'three_days');
+$bookingSmallThreeDays->addItem(new BookingItem($ticket10, 1));
+$runner->near(0.00, $calculator->calculateTotal($bookingSmallThreeDays), 'Pass 3 jours sur 10€ : montant final plafonné à 0€');
 
 echo "\n=== 2. TESTS DES MONTANTS NÉGATIFS / PANIER INVALIDE ===\n";
 
