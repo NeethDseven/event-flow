@@ -32,7 +32,11 @@ $service->addObserver(new LoyaltyProcessor());
 $service->addObserver(new AnalyticsTracker());
 
 // Choix du processeur de paiement (Ticket #103)
-$paymentProcessor = new StripePaymentAdapter(); 
-$total = $service->confirm($booking, $paymentProcessor);
+$paymentProcessor = new StripePaymentAdapter();
+
+// Monitoring du paiement (Ticket #105)
+$monitoredPaymentProcessor = new PaymentMonitoringDecorator($paymentProcessor);
+
+$total = $service->confirm($booking, $monitoredPaymentProcessor);
 
 echo 'TOTAL FINAL: ' . number_format($total, 2, '.', '') . PHP_EOL;

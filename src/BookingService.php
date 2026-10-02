@@ -5,12 +5,17 @@ declare(strict_types=1);
 class BookingService
 {
     private PricingCalculator $pricingCalculator;
+    private BookingRepository $bookingRepository;
+
     /** @var BookingObserverInterface[] */
     private array $observers = [];
 
-    public function __construct(?PricingCalculator $pricingCalculator = null)
-    {
+    public function __construct(
+        ?PricingCalculator $pricingCalculator = null,
+        ?BookingRepository $bookingRepository = null
+    ) {
         $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
+        $this->bookingRepository = $bookingRepository ?? new BookingRepository();
     }
 
     public function addObserver(BookingObserverInterface $observer): void
@@ -38,9 +43,9 @@ class BookingService
 
         // 3. Confirmation et persistance (uniquement en cas de paiement réussi)
         $booking->confirm();
-        echo sprintf("SQL INSERT booking=%d total=%.2f status=%s\n", $booking->getId(), $total, $booking->getStatus());
+        $this->bookingRepository->save($booking, $total);
 
-                // 4. Notification des observateurs (Pattern Observer)
+        // 4. Notification des observateurs (Pattern Observer)
         $this->notifyObservers(new BookingConfirmedEvent($booking, $total));
 
         return $total;
