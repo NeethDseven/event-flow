@@ -20,6 +20,10 @@ class BookingService
 
     public function confirm(Booking $booking, PaymentProcessorInterface $paymentProcessor): float
     {
+        if ($booking->isEmpty()) {
+            throw new InvalidArgumentException('Empty booking');
+        }
+
         // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
 
@@ -32,8 +36,9 @@ class BookingService
             );
         }
 
-        // 3. Persistance (uniquement en cas de paiement réussi)
-        echo sprintf("SQL INSERT booking=%d total=%.2f status=confirmed\n", $booking->getId(), $total);
+        // 3. Confirmation et persistance (uniquement en cas de paiement réussi)
+        $booking->confirm();
+        echo sprintf("SQL INSERT booking=%d total=%.2f status=%s\n", $booking->getId(), $total, $booking->getStatus());
 
         // 4. Notification des observateurs (Pattern Observer)
         $event = new BookingConfirmedEvent($booking, $total);
