@@ -22,3 +22,4 @@ require_once __DIR__ . '/src/BookingObserverInterface.php';
 require_once __DIR__ . '/src/ConfirmationNotifier.php';
 require_once __DIR__ . '/src/LoyaltyProcessor.php';
 require_once __DIR__ . '/src/AnalyticsTracker.php';
+require_once __DIR__ . '/src/PaymentMonitoringDecorator.php';

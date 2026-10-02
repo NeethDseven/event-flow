@@ -62,3 +62,20 @@ $service = new BookingService();
 $service->addObserver(new ConfirmationNotifier());
 $service->addObserver(new LoyaltyProcessor());
 $service->addObserver(new AnalyticsTracker());
+
+// --- Test Ticket 105 : Monitoring du paiement ---
+$serviceMonitored = new BookingService();
+$serviceMonitored->addObserver(new ConfirmationNotifier());
+$serviceMonitored->addObserver(new LoyaltyProcessor());
+$serviceMonitored->addObserver(new AnalyticsTracker());
+
+// Instanciation de l'adaptateur Stripe et de son décorateur de monitoring
+$stripeAdapter = new StripePaymentAdapter();
+$monitoredStripe = new PaymentMonitoringDecorator($stripeAdapter);
+
+// Confirmation avec le processeur décoré
+$bookingTest = new Booking(id: 1006, customer: $customerVip, passType: 'day');
+$bookingTest->addItem(new BookingItem($dayTicket, 1));
+
+$totalMonitored = $serviceMonitored->confirm($bookingTest, $monitoredStripe);
+assertSameValue(75.91, $totalMonitored, 'Paiement Stripe monitoré pour client VIP');
