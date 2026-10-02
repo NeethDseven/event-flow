@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+final class MonitoredPaymentGateway implements PaymentProcessorInterface
+{
+    public function __construct(
+        private PaymentProcessorInterface $processor
+    ) {
+    }
+
+    public function processPayment(float $amount, int $bookingId): bool
+    {
+        $start = microtime(true);
+
+        echo "PAYMENT REQUEST amount={$amount} booking={$bookingId}" . PHP_EOL;
+
+        try {
+            $success = $this->processor->processPayment($amount, $bookingId);
+
+            $duration = microtime(true) - $start;
+
+            echo "PAYMENT SUCCESS amount={$amount} booking={$bookingId} duration={$duration}" . PHP_EOL;
+
+            return $success;
+        } catch (Throwable $exception) {
+            $duration = microtime(true) - $start;
+
+            echo "PAYMENT FAILURE amount={$amount} booking={$bookingId} duration={$duration}" . PHP_EOL;
+
+            throw $exception;
+        }
+    }
+}
