@@ -183,5 +183,38 @@ ob_start();
 ));
 $runner->same(false, str_contains(ob_get_clean(), 'SMS'), 'Client sans téléphone (null) : pas de SMS');
 
+echo "\n=== 6. TESTS DES RÉACTIONS APRÈS CONFIRMATION (#104) ===\n";
+
+final class FailingObserver implements BookingObserverInterface
+{
+    public function onBookingConfirmed(BookingConfirmedEvent $event): void
+    {
+        throw new RuntimeException('SMS provider down');
+    }
+}
+
+$serviceWithFailure = new BookingService();
+$serviceWithFailure->addObserver(new FailingObserver());
+$serviceWithFailure->addObserver(new LoyaltyProcessor());
+$serviceWithFailure->addObserver(new AnalyticsTracker());
+
+$bookingObservers = new Booking(id: 6001, customer: $customerStd, passType: 'day');
+$bookingObservers->addItem(new BookingItem($dayTicket, 1));
+
+$observerError = null;
+ob_start();
+try {
+    $serviceWithFailure->confirm($bookingObservers, new StripePaymentAdapter());
+} catch (\Throwable $e) {
+    $observerError = $e->getMessage();
+}
+$observersOutput = ob_get_clean();
+
+$runner->same(null, $observerError, 'Une réaction en échec ne fait pas échouer la confirmation');
+$runner->same('confirmed', $bookingObservers->getStatus(), 'La réservation reste confirmée malgré la réaction en échec');
+$runner->same(true, str_contains($observersOutput, 'LOYALTY customer=2 points=79'), 'Les points de fidélité sont ajoutés malgré tout');
+$runner->same(true, str_contains($observersOutput, 'ANALYTICS booking_confirmed'), 'Les statistiques sont transmises malgré tout');
+$runner->same(true, str_contains($observersOutput, 'OBSERVER ERROR FailingObserver: SMS provider down'), "L'échec de la réaction est journalisé");
+
 // Bilan global des tests et code de sortie (exit 1 si échec)
 $runner->summary();

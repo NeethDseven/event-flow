@@ -40,12 +40,24 @@ class BookingService
         $booking->confirm();
         echo sprintf("SQL INSERT booking=%d total=%.2f status=%s\n", $booking->getId(), $total, $booking->getStatus());
 
-        // 4. Notification des observateurs (Pattern Observer)
-        $event = new BookingConfirmedEvent($booking, $total);
-        foreach ($this->observers as $observer) {
-            $observer->onBookingConfirmed($event);
-        }
+                // 4. Notification des observateurs (Pattern Observer)
+        $this->notifyObservers(new BookingConfirmedEvent($booking, $total));
 
         return $total;
+    }
+
+    /**
+     * Une réaction qui échoue ne doit ni annuler une réservation déjà payée,
+     * ni empêcher les autres réactions de s'exécuter.
+     */
+    private function notifyObservers(BookingConfirmedEvent $event): void
+    {
+        foreach ($this->observers as $observer) {
+            try {
+                $observer->onBookingConfirmed($event);
+            } catch (\Throwable $error) {
+                echo sprintf("OBSERVER ERROR %s: %s\n", $observer::class, $error->getMessage());
+            }
+        }
     }
 }
