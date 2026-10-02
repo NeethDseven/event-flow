@@ -134,5 +134,54 @@ $bookingSuccess->addItem(new BookingItem($dayTicket, 1));
 $totalSuccess = $serviceMonitored->confirm($bookingSuccess, $monitoredStripe);
 $runner->near(75.91, $totalSuccess, 'Paiement Stripe monitoré réussi pour VIP');
 
+echo "\n=== 5. TESTS DES VALIDATIONS ET DU STATUT ===\n";
+
+function expectException(callable $action): ?string
+{
+    try {
+        ob_start();
+        $action();
+        ob_end_clean();
+        return null;
+    } catch (\Throwable $e) {
+        ob_end_clean();
+        return $e->getMessage();
+    }
+}
+
+$runner->same('Empty booking', expectException(fn () => (new BookingService())->confirm(
+    new Booking(id: 5001, customer: $customerStd, passType: 'day'),
+    new StripePaymentAdapter()
+)), 'Réservation vide refusée');
+
+$runner->same('Invalid email', expectException(
+    fn () => new Customer(id: 9, email: 'pas-un-email', phone: null, type: 'standard')
+), 'Email invalide refusé');
+
+$runner->same('Invalid quantity', expectException(
+    fn () => new BookingItem($dayTicket, 0)
+), 'Quantité nulle refusée');
+
+$bookingStatus = new Booking(id: 5002, customer: $customerStd, passType: 'day');
+$bookingStatus->addItem(new BookingItem($dayTicket, 1));
+$runner->same('pending', $bookingStatus->getStatus(), 'Une nouvelle réservation est en attente');
+ob_start();
+(new BookingService())->confirm($bookingStatus, new StripePaymentAdapter());
+ob_end_clean();
+$runner->same('confirmed', $bookingStatus->getStatus(), 'Une réservation payée devient confirmée');
+
+$bookingRefused = new Booking(id: 5003, customer: $customerStd, passType: 'day');
+$bookingRefused->addItem(new BookingItem($dayTicket, 1));
+expectException(fn () => (new BookingService())->confirm($bookingRefused, new FailedPaymentProcessorMock()));
+$runner->same('pending', $bookingRefused->getStatus(), 'Un paiement refusé laisse la réservation en attente');
+
+$customerNullPhone = new Customer(id: 4, email: 'nullphone@example.com');
+ob_start();
+(new ConfirmationNotifier())->onBookingConfirmed(new BookingConfirmedEvent(
+    new Booking(id: 5004, customer: $customerNullPhone, passType: 'day'),
+    79.90
+));
+$runner->same(false, str_contains(ob_get_clean(), 'SMS'), 'Client sans téléphone (null) : pas de SMS');
+
 // Bilan global des tests et code de sortie (exit 1 si échec)
 $runner->summary();

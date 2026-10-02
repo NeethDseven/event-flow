@@ -22,9 +22,8 @@ class ConfirmationNotifier implements BookingObserverInterface
         $this->emailService->sendConfirmation($customer->getEmail(), $booking->getId());
 
         // 2. SMS uniquement si un numéro est présent (méthode ->send)
-        $phone = trim($customer->getPhone());
-        if ($phone !== '') {
-            $this->smsClient->send($phone, sprintf("Réservation #%d confirmée !", $booking->getId()));
+        if ($customer->hasPhone()) {
+            $this->smsClient->send(trim($customer->getPhone()), sprintf("Réservation #%d confirmée !", $booking->getId()));
         }
     }
 }
