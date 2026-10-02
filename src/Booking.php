@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 class Booking
 {
+    private const STATUS_PENDING = 'pending';
+    private const STATUS_CONFIRMED = 'confirmed';
+
     private array $items = [];
+    private string $status = self::STATUS_PENDING;
 
     public function __construct(
         private int $id,
@@ -22,6 +26,11 @@ class Booking
         return $this->items;
     }
 
+    public function isEmpty(): bool
+    {
+        return count($this->items) === 0;
+    }
+
     public function getId(): int
     {
         return $this->id;
@@ -35,5 +44,15 @@ class Booking
     public function getPassType(): string
     {
         return $this->passType;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    public function confirm(): void
+    {
+        $this->status = self::STATUS_CONFIRMED;
     }
 }

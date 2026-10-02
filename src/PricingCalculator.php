@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 class PricingCalculator
 {
+    private const THREE_DAYS_PASS = 'three_days';
+    private const THREE_DAYS_PASS_DISCOUNT = 20.0;
+
     public function calculateTotal(Booking $booking): float
     {
         $baseStrategy = new StandardPricingStrategy();
@@ -13,6 +16,12 @@ class PricingCalculator
             default => $baseStrategy,
         };
 
-        return $strategy->calculate($booking);
+        $total = $strategy->calculate($booking);
+
+        if ($booking->getPassType() === self::THREE_DAYS_PASS) {
+            $total -= self::THREE_DAYS_PASS_DISCOUNT;
+        }
+
+        return round(max(0.0, $total), 2);
     }
 }

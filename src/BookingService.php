@@ -27,10 +27,15 @@ class BookingService
         Booking $booking,
         PaymentProcessorInterface $paymentProcessor
     ): float {
-        // 1. Calcul du total
+        // 1. Vérification de la réservation
+        if ($booking->isEmpty()) {
+            throw new InvalidArgumentException('Empty booking');
+        }
+
+        // 2. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
 
-        // 2. Paiement
+        // 3. Paiement
         $success = $paymentProcessor->processPayment(
             $total,
             $booking->getId(),
@@ -38,7 +43,7 @@ class BookingService
         );
 
         if (!$success) {
-            throw new RuntimeException(
+            throw new PaymentFailedException(
                 sprintf(
                     "Échec du paiement pour la réservation #%d",
                     $booking->getId()
@@ -46,15 +51,20 @@ class BookingService
             );
         }
 
-        // 3. Persistance uniquement après paiement réussi
+        // 4. Confirmation et persistance
+        $booking->confirm();
         $this->bookingRepository->save($booking, $total);
 
-        // 4. Notification
+        // 5. Notification des observateurs
         $this->notifyObservers($booking, $total);
 
         return $total;
     }
 
+    /**
+     * Une réaction qui échoue ne doit ni annuler une réservation déjà payée,
+     * ni empêcher les autres réactions de s'exécuter.
+     */
     private function notifyObservers(
         Booking $booking,
         float $total
@@ -62,7 +72,15 @@ class BookingService
         $event = new BookingConfirmedEvent($booking, $total);
 
         foreach ($this->observers as $observer) {
-            $observer->onBookingConfirmed($event);
+            try {
+                $observer->onBookingConfirmed($event);
+            } catch (\Throwable $error) {
+                echo sprintf(
+                    "OBSERVER ERROR %s: %s\n",
+                    $observer::class,
+                    $error->getMessage()
+                );
+            }
         }
     }
 }

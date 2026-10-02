@@ -22,6 +22,7 @@ require_once __DIR__ . '/src/StandardPricingStrategy.php';
 require_once __DIR__ . '/src/VipPricingStrategy.php';
 require_once __DIR__ . '/src/PricingCalculator.php';
 
+require_once __DIR__ . '/src/PaymentFailedException.php';
 require_once __DIR__ . '/src/PaymentProcessorInterface.php';
 require_once __DIR__ . '/src/StripePaymentAdapter.php';
 require_once __DIR__ . '/src/PayFastPaymentAdapter.php';

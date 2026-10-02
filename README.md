@@ -16,6 +16,7 @@ php index.php
 
 ```bash
 php tests/characterization.php
+php tests/payment.php
 ```
 
 ## Important
