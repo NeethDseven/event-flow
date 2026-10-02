@@ -10,9 +10,13 @@ class Customer
     public function __construct(
         private int $id,
         private string $email,
-        private string $phone,
-        private string $type
-    ) {}
+        private ?string $phone = null,
+        private string $type = 'standard'
+    ) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('Invalid email');
+        }
+    }
 
     public function getId(): int
     {
@@ -24,9 +28,14 @@ class Customer
         return $this->email;
     }
 
-    public function getPhone(): string
+    public function getPhone(): ?string
     {
         return $this->phone;
+    }
+
+    public function hasPhone(): bool
+    {
+        return $this->phone !== null && trim($this->phone) !== '';
     }
 
     public function getType(): string

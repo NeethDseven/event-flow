@@ -5,7 +5,6 @@ declare(strict_types=1);
 class BookingService
 {
     private PricingCalculator $pricingCalculator;
-    private BookingLoggerInterface $logger;
     private BookingRepository $bookingRepository;
 
     /** @var BookingObserverInterface[] */
@@ -13,11 +12,9 @@ class BookingService
 
     public function __construct(
         ?PricingCalculator $pricingCalculator = null,
-        ?BookingLoggerInterface $logger = null,
         ?BookingRepository $bookingRepository = null
     ) {
         $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
-        $this->logger = $logger ?? new ConsoleBookingLogger();
         $this->bookingRepository = $bookingRepository ?? new BookingRepository();
     }
 
@@ -30,17 +27,23 @@ class BookingService
         Booking $booking,
         PaymentProcessorInterface $paymentProcessor
     ): float {
+        // 1. Vérification de la réservation
         if ($booking->isEmpty()) {
             throw new InvalidArgumentException('Empty booking');
         }
 
+        // 2. Calcul du prix
         $total = $this->pricingCalculator->calculateTotal($booking);
+
+        // 3. Paiement
         $success = $paymentProcessor->processPayment(
             $total,
             $booking->getId(),
-            DomainConstants::CURRENCY_EUR
+            'EUR'
         );
 
+        // Paiement refusé :
+        // la réservation est rejetée et ne doit pas être confirmée.
         if (!$success) {
             throw new PaymentFailedException(
                 sprintf(
@@ -50,17 +53,23 @@ class BookingService
             );
         }
 
+        // 4. Confirmation et persistance
         $booking->confirm();
-        $this->logger->logConfirmedBooking($booking->getId(), $total);
         $this->bookingRepository->save($booking, $total);
+
+        // 5. Notification des observateurs
+        // Une erreur d'un observateur ne doit pas annuler
+        // une réservation déjà payée.
         $this->notifyObservers($booking, $total);
 
         return $total;
     }
 
     /**
-     * Une réaction qui échoue ne doit ni annuler une réservation déjà payée,
-     * ni empêcher les autres réactions de s'exécuter.
+     * Notifie tous les observateurs.
+     *
+     * Si un observateur rencontre une erreur, celle-ci est isolée :
+     * les autres observateurs peuvent quand même être exécutés.
      */
     private function notifyObservers(
         Booking $booking,

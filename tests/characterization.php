@@ -5,9 +5,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/TestRunner.php';
 
-class FailedPaymentProcessorMock implements PaymentProcessorInterface
+final class FailedPaymentProcessorMock implements PaymentProcessorInterface
 {
-    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
+    public function processPayment(float $amount, int $bookingId, string $currency = DomainConstants::CURRENCY_EUR): bool
     {
         return false;
     }
@@ -34,6 +34,19 @@ function createTickets(): array
     ];
 }
 
+function expectException(callable $action): ?string
+{
+    try {
+        ob_start();
+        $action();
+        ob_end_clean();
+        return null;
+    } catch (\Throwable $e) {
+        ob_end_clean();
+        return $e->getMessage();
+    }
+}
+
 function runPricingTests(TestRunner $runner): void
 {
     $customers = createCustomers();
@@ -57,6 +70,14 @@ function runPricingTests(TestRunner $runner): void
     $booking150ThreeDays = new Booking(id: 2005, customer: $customers['vip'], passType: Booking::PASS_THREE_DAYS);
     $booking150ThreeDays->addItem(new BookingItem($tickets['150'], 1));
     $runner->near(115.00, $calculator->calculateTotal($booking150ThreeDays), 'VIP Pass 3 jours sous 300€ (-20€)');
+
+    $bookingStdThreeDays = new Booking(id: 2006, customer: $customers['standard'], passType: Booking::PASS_THREE_DAYS);
+    $bookingStdThreeDays->addItem(new BookingItem(new Ticket(code: 'T-60', label: 'Ticket 60€', price: 60.00), 2));
+    $runner->near(100.00, $calculator->calculateTotal($bookingStdThreeDays), 'Standard Pass 3 jours (120€ - 20€ = 100€)');
+
+    $bookingSmallThreeDays = new Booking(id: 2007, customer: $customers['standard'], passType: Booking::PASS_THREE_DAYS);
+    $bookingSmallThreeDays->addItem(new BookingItem(new Ticket(code: 'T-10', label: 'Ticket 10€', price: 10.00), 1));
+    $runner->near(0.00, $calculator->calculateTotal($bookingSmallThreeDays), 'Pass 3 jours sur 10€ : montant final plafonné à 0€');
 
     echo "\n=== 2. TESTS DES MONTANTS NÉGATIFS / PANIER INVALIDE ===\n";
 
@@ -133,7 +154,81 @@ function runPaymentTests(TestRunner $runner): void
 }
 
 $runner = new TestRunner();
+
+$customerStd = new Customer(id: 2, email: 'std@example.com', phone: '0611223344', type: Customer::TYPE_STANDARD);
+$dayTicket = new Ticket(code: 'DAY-1', label: 'Pass 1 Jour', price: 79.90);
+
 runPricingTests($runner);
 runNotificationTests($runner);
 runPaymentTests($runner);
+
+echo "\n=== 5. TESTS DES VALIDATIONS ET DU STATUT ===\n";
+
+$runner->same('Empty booking', expectException(fn () => (new BookingService())->confirm(
+    new Booking(id: 5001, customer: $customerStd, passType: Booking::PASS_DAY),
+    new StripePaymentAdapter()
+)), 'Réservation vide refusée');
+
+$runner->same('Invalid email', expectException(
+    fn () => new Customer(id: 9, email: 'pas-un-email', phone: null, type: Customer::TYPE_STANDARD)
+), 'Email invalide refusé');
+
+$runner->same('Invalid quantity', expectException(
+    fn () => new BookingItem($dayTicket, 0)
+), 'Quantité nulle refusée');
+
+$bookingStatus = new Booking(id: 5002, customer: $customerStd, passType: Booking::PASS_DAY);
+$bookingStatus->addItem(new BookingItem($dayTicket, 1));
+$runner->same('pending', $bookingStatus->getStatus(), 'Une nouvelle réservation est en attente');
+ob_start();
+(new BookingService())->confirm($bookingStatus, new StripePaymentAdapter());
+ob_end_clean();
+$runner->same('confirmed', $bookingStatus->getStatus(), 'Une réservation payée devient confirmée');
+
+$bookingRefused = new Booking(id: 5003, customer: $customerStd, passType: Booking::PASS_DAY);
+$bookingRefused->addItem(new BookingItem($dayTicket, 1));
+expectException(fn () => (new BookingService())->confirm($bookingRefused, new FailedPaymentProcessorMock()));
+$runner->same('pending', $bookingRefused->getStatus(), 'Un paiement refusé laisse la réservation en attente');
+
+$customerNullPhone = new Customer(id: 4, email: 'nullphone@example.com');
+ob_start();
+(new ConfirmationNotifier())->onBookingConfirmed(new BookingConfirmedEvent(
+    new Booking(id: 5004, customer: $customerNullPhone, passType: Booking::PASS_DAY),
+    79.90
+));
+$runner->same(false, str_contains(ob_get_clean(), 'SMS'), 'Client sans téléphone (null) : pas de SMS');
+
+echo "\n=== 6. TESTS DES RÉACTIONS APRÈS CONFIRMATION (#104) ===\n";
+
+final class FailingObserver implements BookingObserverInterface
+{
+    public function onBookingConfirmed(BookingConfirmedEvent $event): void
+    {
+        throw new RuntimeException('SMS provider down');
+    }
+}
+
+$serviceWithFailure = new BookingService();
+$serviceWithFailure->addObserver(new FailingObserver());
+$serviceWithFailure->addObserver(new LoyaltyProcessor());
+$serviceWithFailure->addObserver(new AnalyticsTracker());
+
+$bookingObservers = new Booking(id: 6001, customer: $customerStd, passType: Booking::PASS_DAY);
+$bookingObservers->addItem(new BookingItem($dayTicket, 1));
+
+$observerError = null;
+ob_start();
+try {
+    $serviceWithFailure->confirm($bookingObservers, new StripePaymentAdapter());
+} catch (\Throwable $e) {
+    $observerError = $e->getMessage();
+}
+$observersOutput = ob_get_clean();
+
+$runner->same(null, $observerError, 'Une réaction en échec ne fait pas échouer la confirmation');
+$runner->same('confirmed', $bookingObservers->getStatus(), 'La réservation reste confirmée malgré la réaction en échec');
+$runner->same(true, str_contains($observersOutput, 'LOYALTY customer=2 points=79'), 'Les points de fidélité sont ajoutés malgré tout');
+$runner->same(true, str_contains($observersOutput, 'ANALYTICS booking_confirmed'), 'Les statistiques sont transmises malgré tout');
+$runner->same(true, str_contains($observersOutput, 'OBSERVER ERROR FailingObserver: SMS provider down'), "L'échec de la réaction est journalisé");
+
 $runner->summary();
