@@ -7,7 +7,11 @@ class BookingItem
     public function __construct(
         private Ticket $ticket,
         private int $quantity
-    ) {}
+    ) {
+        if ($quantity <= 0) {
+            throw new InvalidArgumentException('Invalid quantity');
+        }
+    }
 
     public function getTicket(): Ticket
     {

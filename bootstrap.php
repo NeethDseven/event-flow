@@ -20,6 +20,7 @@ require_once __DIR__ . '/src/PaymentLoggerInterface.php';
 require_once __DIR__ . '/src/ConsolePaymentLogger.php';
 require_once __DIR__ . '/src/BookingService.php';
 require_once __DIR__ . '/src/PricingCalculator.php';
+require_once __DIR__ . '/src/PaymentFailedException.php';
 require_once __DIR__ . '/src/PaymentProcessorInterface.php';
 require_once __DIR__ . '/src/StripePaymentAdapter.php';
 require_once __DIR__ . '/src/PayFastPaymentAdapter.php';

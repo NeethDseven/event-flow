@@ -17,13 +17,7 @@ class VipPricingStrategy implements PricingStrategyInterface
     {
         $subtotal = $this->baseStrategy->calculate($booking);
         $discount = $this->getDiscountRate($subtotal);
-        $total = $subtotal * (1.0 - $discount);
-
-        if ($booking->getPassType() === Booking::PASS_THREE_DAYS) {
-            $total -= self::THREE_DAYS_PASS_DISCOUNT;
-        }
-
-        return round(max(0.0, $total), 2);
+        return round($subtotal * (1.0 - $discount), 2);
     }
 
     private function getDiscountRate(float $subtotal): float

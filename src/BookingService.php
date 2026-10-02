@@ -24,26 +24,42 @@ class BookingService
 
     public function confirm(Booking $booking, PaymentProcessorInterface $paymentProcessor): float
     {
+        if ($booking->isEmpty()) {
+            throw new InvalidArgumentException('Empty booking');
+        }
+
+        // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
         $success = $paymentProcessor->processPayment($total, $booking->getId());
 
         if (!$success) {
-            throw new \RuntimeException(
+            throw new PaymentFailedException(
                 sprintf("Échec du paiement pour la réservation #%d", $booking->getId())
             );
         }
 
-        $this->logger->logConfirmedBooking($booking->getId(), $total);
-        $this->notifyObservers($booking, $total);
+        // 3. Confirmation et persistance (uniquement en cas de paiement réussi)
+        $booking->confirm();
+        echo sprintf("SQL INSERT booking=%d total=%.2f status=%s\n", $booking->getId(), $total, $booking->getStatus());
+
+    // 4. Notification des observateurs (Pattern Observer)
+        $this->notifyObservers(new BookingConfirmedEvent($booking, $total));
 
         return $total;
     }
 
-    private function notifyObservers(Booking $booking, float $total): void
+    /**
+     * Une réaction qui échoue ne doit ni annuler une réservation déjà payée,
+     * ni empêcher les autres réactions de s'exécuter.
+     */
+    private function notifyObservers(BookingConfirmedEvent $event): void
     {
-        $event = new BookingConfirmedEvent($booking, $total);
         foreach ($this->observers as $observer) {
-            $observer->onBookingConfirmed($event);
+            try {
+                $observer->onBookingConfirmed($event);
+            } catch (\Throwable $error) {
+                echo sprintf("OBSERVER ERROR %s: %s\n", $observer::class, $error->getMessage());
+            }
         }
     }
 }
