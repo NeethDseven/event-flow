@@ -5,20 +5,27 @@ declare(strict_types=1);
 class PayFastPaymentAdapter implements PaymentProcessorInterface
 {
     private PayFastSdk $payFastSdk;
+    private CurrencyConverter $converter;
 
-    public function __construct(?PayFastSdk $payFastSdk = null)
-    {
+    public function __construct(
+        ?PayFastSdk $payFastSdk = null,
+        ?CurrencyConverter $converter = null
+    ) {
         $this->payFastSdk = $payFastSdk ?? new PayFastSdk();
+        $this->converter = $converter ?? new CurrencyConverter();
     }
 
-    public function processPayment(float $amount, int $bookingId): bool
+    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
     {
-        $result = $this->payFastSdk->executePayment([
+        $money = new Money($amount, $currency);
+        $converted = $this->converter->convert($money, 'ZAR');
+        $payload = [
             'reference' => (string) $bookingId,
-            'amount_cents' => (int) round($amount * 100),
-            'currency' => 'EUR',
-        ]);
+            'amount_cents' => (int) round($converted->getAmount() * 100),
+            'currency' => $converted->getCurrency(),
+        ];
+        $result = $this->payFastSdk->executePayment($payload);
 
-        return $result['success'] ?? false;
+        return $result['success'];
     }
 }
