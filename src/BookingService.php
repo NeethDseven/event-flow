@@ -27,7 +27,7 @@ class BookingService
         $success = $paymentProcessor->processPayment($total, $booking->getId());
 
         if (!$success) {
-            throw new \RuntimeException(
+            throw new PaymentFailedException(
                 sprintf("Échec du paiement pour la réservation #%d", $booking->getId())
             );
         }

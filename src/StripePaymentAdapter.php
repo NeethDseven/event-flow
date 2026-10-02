@@ -13,7 +13,12 @@ class StripePaymentAdapter implements PaymentProcessorInterface
 
     public function processPayment(float $amount, int $bookingId): bool
     {
-        $this->stripeClient->charge($amount);
+        try {
+            $this->stripeClient->charge($amount);
+        } catch (RuntimeException $exception) {
+            throw new PaymentFailedException('Stripe payment failed: ' . $exception->getMessage(), 0, $exception);
+        }
+
         return true;
     }
 }
