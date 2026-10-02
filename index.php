@@ -25,7 +25,14 @@ $booking = new Booking(
 
 $booking->addItem(new BookingItem($dayTicket, 2));
 
+// Initialisation du service et enregistrement des observateurs (Ticket #104)
 $service = new BookingService();
-$total = $service->confirm($booking, 'stripe');
+$service->addObserver(new ConfirmationNotifier());
+$service->addObserver(new LoyaltyProcessor());
+$service->addObserver(new AnalyticsTracker());
+
+// Choix du processeur de paiement (Ticket #103)
+$paymentProcessor = new StripePaymentAdapter(); 
+$total = $service->confirm($booking, $paymentProcessor);
 
 echo 'TOTAL FINAL: ' . number_format($total, 2, '.', '') . PHP_EOL;

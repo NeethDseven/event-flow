@@ -17,3 +17,8 @@ require_once __DIR__ . '/src/PricingCalculator.php';
 require_once __DIR__ . '/src/PaymentProcessorInterface.php';
 require_once __DIR__ . '/src/StripePaymentAdapter.php';
 require_once __DIR__ . '/src/PayFastPaymentAdapter.php';
+require_once __DIR__ . '/src/BookingConfirmedEvent.php';
+require_once __DIR__ . '/src/BookingObserverInterface.php';
+require_once __DIR__ . '/src/ConfirmationNotifier.php';
+require_once __DIR__ . '/src/LoyaltyProcessor.php';
+require_once __DIR__ . '/src/AnalyticsTracker.php';

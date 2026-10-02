@@ -57,3 +57,8 @@ $expensiveTicket = new Ticket(code: 'PASS-3', label: 'Pass 3 jours', price: 200.
 $bookingVipBig = new Booking(id: 1004, customer: $customerVip, passType: 'three_days');
 $bookingVipBig->addItem(new BookingItem($expensiveTicket, 2));
 assertSameValue(320.00, $calculator->calculateTotal($bookingVipBig), 'Tarif VIP >= 300€ avec Pass 3 jours');
+
+$service = new BookingService();
+$service->addObserver(new ConfirmationNotifier());
+$service->addObserver(new LoyaltyProcessor());
+$service->addObserver(new AnalyticsTracker());
