@@ -23,3 +23,6 @@ require_once __DIR__ . '/src/ConfirmationNotifier.php';
 require_once __DIR__ . '/src/LoyaltyProcessor.php';
 require_once __DIR__ . '/src/AnalyticsTracker.php';
 require_once __DIR__ . '/src/PaymentMonitoringDecorator.php';
+require_once __DIR__ . '/src/PricingStrategyInterface.php';
+require_once __DIR__ . '/src/StandardPricingStrategy.php';
+require_once __DIR__ . '/src/VipPricingStrategy.php';
