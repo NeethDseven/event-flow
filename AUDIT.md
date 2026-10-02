@@ -17,10 +17,11 @@ Lors de l'exécution via `php index.php`, la réservation calculait un total bru
 
 ## 3. Nos trois priorités
 
-1. **Isoler et sécuriser le calcul tarifaire** (Ticket #102) via une stratégie dédiée pour éviter les erreurs de facturation.
-2. **Abstraire les moyens de paiement via une interface commune** (Ticket #103) pour intégrer PayFast proprement.
-3. **Découpler les actions post-confirmation** (Ticket #104) grâce à un mécanisme d'événements/observateurs.
+1. **Isoler et sécuriser le calcul tarifaire** (Ticket 102) via une stratégie dédiée pour éviter les erreurs de facturation.
+2. **Abstraire les moyens de paiement via une interface commune** (Ticket 103) pour intégrer PayFast proprement.
+3. **Découpler les actions post-confirmation** (Ticket 104) grâce à un mécanisme d'événements/observateurs.
 
 ## 4. Risques avant refactoring
+
 - Modifier la logique de calcul tarifaire sans tests de caractérisation risque d'impacter les clients VIP actuels.
-- Coupler PayFast au service principal risque de briser le paiement Stripe existant.
+- Coupler PayFast au service principal risque de briser le paiement Stripe existant

@@ -2,13 +2,32 @@
 
 declare(strict_types=1);
 
-final class Customer
+class Customer
 {
     public function __construct(
-        public int $id,
-        public string $email,
-        public ?string $phone = null,
-        public string $type = 'standard'
-    ) {
+        private int $id,
+        private string $email,
+        private string $phone,
+        private string $type
+    ) {}
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+
+    public function getPhone(): string
+    {
+        return $this->phone;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
     }
 }

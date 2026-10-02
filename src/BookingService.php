@@ -2,54 +2,32 @@
 
 declare(strict_types=1);
 
-final class BookingService
+class BookingService
 {
-    public function confirm(Booking $booking, string $paymentMethod = 'stripe'): float
+    private PricingCalculator $pricingCalculator;
+
+    public function __construct(?PricingCalculator $pricingCalculator = null)
     {
-        if (count($booking->items) === 0) {
-            throw new RuntimeException('Empty booking');
-        }
+        $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
+    }
 
-        if (!filter_var($booking->customer->email, FILTER_VALIDATE_EMAIL)) {
-            throw new RuntimeException('Invalid email');
-        }
+    public function confirm(Booking $booking, string $paymentMethod): float
+    {
+        // 1. Calcul du total via le composant isolé
+        $total = $this->pricingCalculator->calculateTotal($booking);
 
-        $total = 0.0;
-
-        foreach ($booking->items as $item) {
-            if ($item->quantity <= 0) {
-                throw new RuntimeException('Invalid quantity');
-            }
-
-            $total += $item->ticket->price * $item->quantity;
-        }
-
-        // Ancienne règle VIP : remise fixe de 10 %.
-        if ($booking->customer->type === 'vip') {
-            $total *= 0.90;
-        }
-
-        // Ancienne règle Pass 3 jours : remise fixe de 10 euros.
-        if ($booking->passType === '3days') {
-            $total -= 10.0;
-        }
-
+        // 2. Traitement du paiement Stripe initial
         if ($paymentMethod === 'stripe') {
             $stripe = new StripeClient();
-            $transactionId = $stripe->charge($total);
-            echo "PAYMENT {$transactionId}" . PHP_EOL;
-        } elseif ($paymentMethod === 'payfast') {
-            throw new RuntimeException('PayFast not implemented');
-        } else {
-            throw new RuntimeException('Unknown payment method');
+            $stripe->charge($total);
         }
 
-        $booking->status = 'confirmed';
+        // 3. Persistance
+        echo sprintf("SQL INSERT booking=%d total=%.2f status=confirmed\n", $booking->getId(), $total);
 
-        echo "SQL INSERT booking={$booking->id} total={$total} status={$booking->status}" . PHP_EOL;
-
+        // 4. Notifications (utilisation du getter getEmail())
         $emailService = new EmailService();
-        $emailService->sendConfirmation($booking->customer->email, $booking->id);
+        $emailService->sendConfirmation($booking->getCustomer()->getEmail(), $booking->getId());
 
         return $total;
     }

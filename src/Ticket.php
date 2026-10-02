@@ -2,12 +2,26 @@
 
 declare(strict_types=1);
 
-final class Ticket
+class Ticket
 {
     public function __construct(
-        public string $code,
-        public string $label,
-        public float $price
-    ) {
+        private string $code,
+        private string $label,
+        private float $price
+    ) {}
+
+    public function getCode(): string
+    {
+        return $this->code;
+    }
+
+    public function getLabel(): string
+    {
+        return $this->label;
+    }
+
+    public function getPrice(): float
+    {
+        return $this->price;
     }
 }
