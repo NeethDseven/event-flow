@@ -38,6 +38,12 @@ $booking300 = new Booking(id: 2003, customer: $customerVip, passType: 'three_day
 $booking300->addItem(new BookingItem($ticket300, 1));
 $runner->near(235.00, $calculator->calculateTotal($booking300), 'VIP Borne 300€ exacte avec Pass 3 jours');
 
+// Pass 3 jours VIP sous 300€ : la remise fixe de 20€ reste applicable
+$ticket150 = new Ticket(code: 'T-150', label: 'Ticket 150€', price: 150.00);
+$booking150ThreeDays = new Booking(id: 2005, customer: $customerVip, passType: 'three_days');
+$booking150ThreeDays->addItem(new BookingItem($ticket150, 1));
+$runner->near(115.00, $calculator->calculateTotal($booking150ThreeDays), 'VIP Pass 3 jours sous 300€ (-20€)');
+
 
 echo "\n=== 2. TESTS DES MONTANTS NÉGATIFS / PANIER INVALIDE ===\n";
 

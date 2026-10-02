@@ -22,7 +22,7 @@ class VipPricingStrategy implements PricingStrategyInterface
 
     $total = $subtotal * (1.0 - $discount);
 
-    if ($booking->getPassType() === 'three_days' && $subtotal >= 300.0) {
+    if ($booking->getPassType() === 'three_days') {
         $total -= 20.0;
     }
 
