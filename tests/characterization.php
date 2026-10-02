@@ -86,7 +86,7 @@ echo "\n=== 4. TESTS DE GESTION DES PAIEMENTS ET MONITORING ===\n";
 
 class FailedPaymentProcessorMock implements PaymentProcessorInterface
 {
-    public function processPayment(float $amount, int $bookingId): bool
+    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
     {
         return false;
     }
