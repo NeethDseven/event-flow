@@ -8,6 +8,10 @@ class PricingCalculator
     {
         $subtotal = 0.0;
         foreach ($booking->getItems() as $item) {
+            if ($item->getTicket()->getPrice() < 0.0) {
+                throw new \InvalidArgumentException("Le prix d'un billet ne peut pas etre negatif.");
+            }
+
             $subtotal += $item->getTicket()->getPrice() * $item->getQuantity();
         }
 

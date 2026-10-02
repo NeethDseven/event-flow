@@ -23,10 +23,16 @@ class BookingService
         // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
 
-        // 2. Traitement du paiement
-        $paymentProcessor->processPayment($total, $booking->getId());
+        // 2. Traitement du paiement et vérification du résultat
+        $success = $paymentProcessor->processPayment($total, $booking->getId());
 
-        // 3. Persistance
+        if (!$success) {
+            throw new \RuntimeException(
+                sprintf("Échec du paiement pour la réservation #%d", $booking->getId())
+            );
+        }
+
+        // 3. Persistance (uniquement en cas de paiement réussi)
         echo sprintf("SQL INSERT booking=%d total=%.2f status=confirmed\n", $booking->getId(), $total);
 
         // 4. Notification des observateurs (Pattern Observer)
