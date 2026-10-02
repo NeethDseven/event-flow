@@ -21,7 +21,7 @@ $customerVip = new Customer(id: 1, email: 'vip@example.com', phone: '0600000000'
 $customerStd = new Customer(id: 2, email: 'std@example.com', phone: '0600000000', type: 'standard');
 $dayTicket = new Ticket(code: 'DAY-1', label: 'Pass 1 Jour', price: 79.90);
 
-// --- Test 1: Ticket #101 / #103 - Comportement VIP avec Stripe Adapter ---
+// --- Test 1: Ticket 101 / 103 - Comportement VIP avec Stripe Adapter ---
 $bookingStripe = new Booking(id: 1001, customer: $customerVip, passType: 'day');
 $bookingStripe->addItem(new BookingItem($dayTicket, 2));
 
@@ -31,7 +31,7 @@ $totalStripe = $service->confirm($bookingStripe, $stripeAdapter);
 
 assertSameValue(143.82, $totalStripe, 'Paiement Stripe pour client VIP (remise 10%)');
 
-// --- Test 2: Ticket #103 - Paiement via PayFast Adapter ---
+// --- Test 2: Ticket 103 - Paiement via PayFast Adapter ---
 $bookingPayFast = new Booking(id: 1005, customer: $customerStd, passType: 'day');
 $bookingPayFast->addItem(new BookingItem($dayTicket, 1));
 $payFastAdapter = new PayFastPaymentAdapter();
@@ -39,7 +39,7 @@ $totalPayFast = $service->confirm($bookingPayFast, $payFastAdapter);
 
 assertSameValue(79.90, $totalPayFast, 'Paiement via PayFast');
 
-// --- Tests Ticket #102 : Calculs de la nouvelle grille tarifaire ---
+// --- Tests Ticket 102 : Calculs de la nouvelle grille tarifaire ---
 $calculator = new PricingCalculator();
 
 // Standard : Pas de remise
