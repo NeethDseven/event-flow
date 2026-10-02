@@ -9,7 +9,7 @@ class PricingCalculator
         $baseStrategy = new StandardPricingStrategy();
 
         $strategy = match ($booking->getCustomer()->getType()) {
-            'vip' => new VipPricingStrategy($baseStrategy),
+            Customer::TYPE_VIP => new VipPricingStrategy($baseStrategy),
             default => $baseStrategy,
         };
 

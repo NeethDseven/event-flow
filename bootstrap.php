@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/src/DomainConstants.php';
+require_once __DIR__ . '/src/ConsoleLogger.php';
 require_once __DIR__ . '/src/Customer.php';
 require_once __DIR__ . '/src/Ticket.php';
 require_once __DIR__ . '/src/BookingItem.php';
@@ -12,6 +14,10 @@ require_once __DIR__ . '/src/EmailService.php';
 require_once __DIR__ . '/src/SmsClient.php';
 require_once __DIR__ . '/src/LoyaltyService.php';
 require_once __DIR__ . '/src/AnalyticsClient.php';
+require_once __DIR__ . '/src/BookingLoggerInterface.php';
+require_once __DIR__ . '/src/ConsoleBookingLogger.php';
+require_once __DIR__ . '/src/PaymentLoggerInterface.php';
+require_once __DIR__ . '/src/ConsolePaymentLogger.php';
 require_once __DIR__ . '/src/BookingService.php';
 require_once __DIR__ . '/src/PricingCalculator.php';
 require_once __DIR__ . '/src/PaymentProcessorInterface.php';

@@ -6,9 +6,9 @@ class CurrencyConverter
 {
     // Taux par rapport à l'EUR (base)
     private array $rates = [
-        'EUR' => 1.0,
+        DomainConstants::CURRENCY_EUR => 1.0,
         'USD' => 1.08,
-        'ZAR' => 19.5, // Ex: PayFast (Afrique du Sud)
+        DomainConstants::CURRENCY_ZAR => 19.5, // Ex: PayFast (Afrique du Sud)
     ];
 
     public function convert(Money $money, string $targetCurrency): Money

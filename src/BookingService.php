@@ -5,12 +5,16 @@ declare(strict_types=1);
 class BookingService
 {
     private PricingCalculator $pricingCalculator;
+    private BookingLoggerInterface $logger;
     /** @var BookingObserverInterface[] */
     private array $observers = [];
 
-    public function __construct(?PricingCalculator $pricingCalculator = null)
-    {
+    public function __construct(
+        ?PricingCalculator $pricingCalculator = null,
+        ?BookingLoggerInterface $logger = null
+    ) {
         $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
+        $this->logger = $logger ?? new ConsoleBookingLogger();
     }
 
     public function addObserver(BookingObserverInterface $observer): void
@@ -20,10 +24,7 @@ class BookingService
 
     public function confirm(Booking $booking, PaymentProcessorInterface $paymentProcessor): float
     {
-        // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
-
-        // 2. Traitement du paiement et vérification du résultat
         $success = $paymentProcessor->processPayment($total, $booking->getId());
 
         if (!$success) {
@@ -32,15 +33,17 @@ class BookingService
             );
         }
 
-        // 3. Persistance (uniquement en cas de paiement réussi)
-        echo sprintf("SQL INSERT booking=%d total=%.2f status=confirmed\n", $booking->getId(), $total);
+        $this->logger->logConfirmedBooking($booking->getId(), $total);
+        $this->notifyObservers($booking, $total);
 
-        // 4. Notification des observateurs (Pattern Observer)
+        return $total;
+    }
+
+    private function notifyObservers(Booking $booking, float $total): void
+    {
         $event = new BookingConfirmedEvent($booking, $total);
         foreach ($this->observers as $observer) {
             $observer->onBookingConfirmed($event);
         }
-
-        return $total;
     }
 }

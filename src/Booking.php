@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 class Booking
 {
+    public const PASS_DAY = DomainConstants::PASS_DAY;
+    public const PASS_THREE_DAYS = DomainConstants::PASS_THREE_DAYS;
+
     private array $items = [];
 
     public function __construct(

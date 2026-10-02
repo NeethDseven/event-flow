@@ -18,7 +18,7 @@ class PayFastPaymentAdapter implements PaymentProcessorInterface
     public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
     {
         $money = new Money($amount, $currency);
-        $converted = $this->converter->convert($money, 'ZAR');
+        $converted = $this->converter->convert($money, DomainConstants::CURRENCY_ZAR);
         $payload = [
             'reference' => (string) $bookingId,
             'amount_cents' => (int) round($converted->getAmount() * 100),

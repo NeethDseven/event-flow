@@ -4,41 +4,35 @@ declare(strict_types=1);
 
 class PaymentMonitoringDecorator implements PaymentProcessorInterface
 {
-    public function __construct(
-        private PaymentProcessorInterface $wrapped
-    ) {}
+    private PaymentLoggerInterface $logger;
 
-    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
+    public function __construct(
+        private PaymentProcessorInterface $wrapped,
+        ?PaymentLoggerInterface $logger = null
+    ) {
+        $this->logger = $logger ?? new ConsolePaymentLogger();
+    }
+
+    public function processPayment(float $amount, int $bookingId, string $currency = DomainConstants::CURRENCY_EUR): bool
     {
         $startTime = microtime(true);
 
         try {
             $success = $this->wrapped->processPayment($amount, $bookingId, $currency);
-            $duration = round((microtime(true) - $startTime) * 1000, 2);
-
-            $status = $success ? 'SUCCESS' : 'FAILED';
-            echo sprintf(
-                "MONITORING [%s] Payment booking #%d | Amount: %.2f %s | Duration: %.2f ms\n",
-                $status,
-                $bookingId,
-                $amount,
-                $currency,
-                $duration
-            );
+            $durationMs = $this->measureDurationMs($startTime);
+            $this->logger->logResult($bookingId, $amount, $currency, $durationMs, $success);
 
             return $success;
         } catch (\Throwable $e) {
-            $duration = round((microtime(true) - $startTime) * 1000, 2);
-            echo sprintf(
-                "MONITORING [ERROR] Payment booking #%d | Amount: %.2f %s | Duration: %.2f ms | Msg: %s\n",
-                $bookingId,
-                $amount,
-                $currency,
-                $duration,
-                $e->getMessage()
-            );
+            $durationMs = $this->measureDurationMs($startTime);
+            $this->logger->logResult($bookingId, $amount, $currency, $durationMs, false, $e->getMessage());
 
             throw $e;
         }
+    }
+
+    private function measureDurationMs(float $startTime): float
+    {
+        return round((microtime(true) - $startTime) * 1000, 2);
     }
 }

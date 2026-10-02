@@ -5,6 +5,7 @@
 - **Séparation des responsabilités** : Découplage de la logique métier de réservation de la logique de calcul tarifaire, d'infrastructure de paiement et de notification.
 - **Inversion des dépendances** : Utilisation d'interfaces (`PaymentProcessorInterface`, `BookingObserverInterface`) pour ne dépendre que d'abstractions et non de réalisations concrètes.
 - **Sécurisation par les tests** : Mise en place de tests de caractérisation couvrant la grille tarifaire, la gestion des devises et l'ensemble des cas limites.
+- **Gestion de la valeur monétaire** : Utilisation de `Money` et `CurrencyConverter` pour représenter un montant avec sa devise et convertir les paiements PayFast.
 
 ## 2. Principes SOLID mobilisés
 
@@ -37,7 +38,7 @@
 
 - **Observer** :
   - *Problème* : La confirmation de réservation déclenche plusieurs actions (Email, SMS, Fidélité, Analytics) qui risquent d'évoluer avec le temps.
-  - *Solution* : Un bus d'événements interne déclenchant un `BookingConfirmedEvent` aux écouteurs enregistrés.
+  - *Solution* : `BookingService` publie un `BookingConfirmedEvent` aux observateurs enregistrés via `BookingObserverInterface`.
   - *Pourquoi pas plus simple* : Des appels directs dans `BookingService` l'auraient surchargé et auraient violé OCP.
 
 - **Decorator** :
@@ -47,7 +48,7 @@
 
 - **Strategy** :
   - *Problème* : Les règles de réductions VIP et Pass 3 jours allaient évoluer de manière indépendante.
-  - *Solution* : `PricingCalculator` encapsule l'algorithme de calcul de prix.
+  - *Solution* : `PricingCalculator` sélectionne une stratégie standard ou VIP. `VipPricingStrategy` applique les seuils de remise de 5 %, 10 % et 15 %, ainsi que les 20 € de remise du Pass 3 jours.
 
 ## 4. Solutions envisagées puis écartées
 
@@ -56,5 +57,21 @@
 
 ## 5. Ce que nous améliorerions avec plus de temps
 
-- Définir un objet valeur `Money` (avec valeur décimale et devise) pour éviter d'utiliser des `float` sujets à des imprécisions d'arrondi.
-- Améliorer la gestion des erreurs lors d'un échec de paiement (levée d'exceptions customisées `PaymentFailedException`).
+- Remplacer les `float` du calcul tarifaire par une gestion monétaire entièrement décimale afin d'éviter les imprécisions d'arrondi.
+- Remplacer le `RuntimeException` de paiement par une exception métier dédiée comme `PaymentFailedException`.
+- Ajouter un dépôt persistant réel à la place de la persistance simulée par la sortie SQL.
+
+## 6. Refactorings réalisés (Ticket #106)
+
+1. **Extraction de la tarification (SRP)** : Isolé les règles de calcul et les réductions dans `PricingCalculator`.
+2. **Encapsulation et suppression des accès directs** : Ajout des getters manquants (`getTicket()`, `getQuantity()`, `getCustomer()`, `getItems()`) sur l'ensemble des entités du domaine.
+3. **Inversion des dépendances de paiement (DIP)** : Remplacé le couplage dur envers `StripeClient` par l'interface `PaymentProcessorInterface`.
+
+## 7. Corrections et sécurisation finales
+
+- **Tarification Strategy** : Extraction de `PricingStrategyInterface`, `StandardPricingStrategy` et `VipPricingStrategy`. Les prix négatifs sont rejetés et les résultats sont arrondis à deux décimales.
+- **Pass 3 jours** : La remise fixe de 20 € est appliquée à tout Pass 3 jours VIP, y compris lorsque le sous-total est inférieur à 300 €.
+- **Paiements** : `StripePaymentAdapter` et `PayFastPaymentAdapter` respectent les signatures réelles de leurs SDKs. PayFast reçoit un payload avec référence, montant en centimes et devise ZAR.
+- **Échec de paiement** : `BookingService` ne persiste et ne notifie la réservation que lorsque le processeur retourne `true`.
+- **Supervision** : `PaymentMonitoringDecorator` journalise le succès, l'échec, les exceptions, le montant et la durée du paiement sans modifier les SDKs.
+- **Tests** : `TestRunner` centralise les assertions et retourne un code d'erreur si un test échoue. La suite couvre les seuils tarifaires, les notifications, les montants invalides et le monitoring des paiements.
