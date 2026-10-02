@@ -30,19 +30,39 @@ class BookingService
         // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
 
-        // 2. Traitement du paiement
-        $paymentProcessor->processPayment($total, $booking->getId());
+        // 2. Paiement
+        $success = $paymentProcessor->processPayment(
+            $total,
+            $booking->getId(),
+            'EUR'
+        );
 
-        // 3. Persistance
+        if (!$success) {
+            throw new RuntimeException(
+                sprintf(
+                    "Échec du paiement pour la réservation #%d",
+                    $booking->getId()
+                )
+            );
+        }
+
+        // 3. Persistance uniquement après paiement réussi
         $this->bookingRepository->save($booking, $total);
 
-        // 4. Notification des observateurs
+        // 4. Notification
+        $this->notifyObservers($booking, $total);
+
+        return $total;
+    }
+
+    private function notifyObservers(
+        Booking $booking,
+        float $total
+    ): void {
         $event = new BookingConfirmedEvent($booking, $total);
 
         foreach ($this->observers as $observer) {
             $observer->onBookingConfirmed($event);
         }
-
-        return $total;
     }
 }

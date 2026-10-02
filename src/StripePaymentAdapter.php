@@ -11,9 +11,10 @@ class StripePaymentAdapter implements PaymentProcessorInterface
         $this->stripeClient = $stripeClient ?? new StripeClient();
     }
 
-    public function processPayment(float $amount, int $bookingId): bool
+    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool
     {
-        $this->stripeClient->charge($amount);
-        return true;
+        $transactionId = $this->stripeClient->charge($amount);
+
+        return $transactionId !== '';
     }
 }
