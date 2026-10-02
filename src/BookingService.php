@@ -6,15 +6,18 @@ class BookingService
 {
     private PricingCalculator $pricingCalculator;
     private BookingLoggerInterface $logger;
+    private BookingRepository $bookingRepository;
     /** @var BookingObserverInterface[] */
     private array $observers = [];
 
     public function __construct(
         ?PricingCalculator $pricingCalculator = null,
-        ?BookingLoggerInterface $logger = null
+        ?BookingLoggerInterface $logger = null,
+        ?BookingRepository $bookingRepository = null
     ) {
         $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
         $this->logger = $logger ?? new ConsoleBookingLogger();
+        $this->bookingRepository = $bookingRepository ?? new BookingRepository($this->logger);
     }
 
     public function addObserver(BookingObserverInterface $observer): void
@@ -22,15 +25,17 @@ class BookingService
         $this->observers[] = $observer;
     }
 
-    public function confirm(Booking $booking, PaymentProcessorInterface $paymentProcessor): float
-    {
+    public function confirm(
+        Booking $booking,
+        PaymentProcessorInterface $paymentProcessor
+    ): float {
         if ($booking->isEmpty()) {
             throw new InvalidArgumentException('Empty booking');
         }
 
         // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
-        $success = $paymentProcessor->processPayment($total, $booking->getId());
+        $success = $paymentProcessor->processPayment($total, $booking->getId(), 'EUR');
 
         if (!$success) {
             throw new PaymentFailedException(
@@ -40,9 +45,9 @@ class BookingService
 
         // 3. Confirmation et persistance (uniquement en cas de paiement réussi)
         $booking->confirm();
-        echo sprintf("SQL INSERT booking=%d total=%.2f status=%s\n", $booking->getId(), $total, $booking->getStatus());
+        $this->bookingRepository->save($booking, $total);
 
-    // 4. Notification des observateurs (Pattern Observer)
+        // 4. Notification des observateurs (Pattern Observer)
         $this->notifyObservers(new BookingConfirmedEvent($booking, $total));
 
         return $total;
