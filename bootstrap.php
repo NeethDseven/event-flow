@@ -26,6 +26,7 @@ require_once __DIR__ . '/src/PaymentProcessorInterface.php';
 require_once __DIR__ . '/src/StripePaymentAdapter.php';
 require_once __DIR__ . '/src/PayFastPaymentAdapter.php';
 require_once __DIR__ . '/src/MonitoredPaymentGateway.php';
+require_once __DIR__ . '/src/PaymentMonitoringDecorator.php';
 
 require_once __DIR__ . '/src/BookingConfirmedEvent.php';
 require_once __DIR__ . '/src/BookingObserverInterface.php';
