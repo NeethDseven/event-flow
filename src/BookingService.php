@@ -5,12 +5,17 @@ declare(strict_types=1);
 class BookingService
 {
     private PricingCalculator $pricingCalculator;
+    private BookingRepository $bookingRepository;
+
     /** @var BookingObserverInterface[] */
     private array $observers = [];
 
-    public function __construct(?PricingCalculator $pricingCalculator = null)
-    {
+    public function __construct(
+        ?PricingCalculator $pricingCalculator = null,
+        ?BookingRepository $bookingRepository = null
+    ) {
         $this->pricingCalculator = $pricingCalculator ?? new PricingCalculator();
+        $this->bookingRepository = $bookingRepository ?? new BookingRepository();
     }
 
     public function addObserver(BookingObserverInterface $observer): void
@@ -18,8 +23,10 @@ class BookingService
         $this->observers[] = $observer;
     }
 
-    public function confirm(Booking $booking, PaymentProcessorInterface $paymentProcessor): float
-    {
+    public function confirm(
+        Booking $booking,
+        PaymentProcessorInterface $paymentProcessor
+    ): float {
         // 1. Calcul du total
         $total = $this->pricingCalculator->calculateTotal($booking);
 
@@ -27,10 +34,11 @@ class BookingService
         $paymentProcessor->processPayment($total, $booking->getId());
 
         // 3. Persistance
-        echo sprintf("SQL INSERT booking=%d total=%.2f status=confirmed\n", $booking->getId(), $total);
+        $this->bookingRepository->save($booking, $total);
 
-        // 4. Notification des observateurs (Pattern Observer)
+        // 4. Notification des observateurs
         $event = new BookingConfirmedEvent($booking, $total);
+
         foreach ($this->observers as $observer) {
             $observer->onBookingConfirmed($event);
         }

@@ -56,4 +56,5 @@ require_once __DIR__ . '/src/AnalyticsTracker.php';
 // Service principal
 // =========================
 
+require_once __DIR__ . '/src/BookingRepository.php';
 require_once __DIR__ . '/src/BookingService.php';
