@@ -10,5 +10,5 @@ interface PaymentProcessorInterface
      * @return bool true si le paiement est accepté, false s'il est refusé
      * @throws PaymentFailedException si le prestataire signale une erreur
      */
-    public function processPayment(float $amount, int $bookingId, string $currency = DomainConstants::CURRENCY_EUR): bool;
+    public function processPayment(float $amount, int $bookingId, string $currency = 'EUR'): bool;
 }
